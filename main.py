@@ -101,7 +101,7 @@ async def on_message(msg):
             pass
 
 
-@bot.slash_command(name="setup", description="Starts the configuration process")
+@bot.command(name="setup", description="Starts the configuration process")
 async def setup(ctx):
     await ctx.respond("Setup complete")
 
