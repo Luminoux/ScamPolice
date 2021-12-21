@@ -96,6 +96,9 @@ async def on_message(msg):
     """ Check for phishing scams """
     async with bot.cursor() as cur:
         await cur.execute(f"select * from phishing where guild_id = {msg.guild.id};")
+        if cur.rowcount:
+            # do checks
+            pass
 
 
 @bot.slash_command(name="setup", description="Starts the configuration process")
