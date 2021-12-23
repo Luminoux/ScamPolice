@@ -4,7 +4,7 @@ PhishingBot
 
 A bot to filter out phishing scams
 
-:copyright: (C) 2019-present FrequencyX4, All Rights Reserved
+:copyright: (C) 2021-present FrequencyX4, All Rights Reserved
 :license: Proprietary, see LICENSE for details
 """
 
@@ -20,6 +20,7 @@ import aiomysql
 import pymysql
 
 from classes.sql import Cursor
+from classes.views import ChooseAction
 
 
 class PhishingBot(Bot):
@@ -95,14 +96,30 @@ async def on_ready():
 async def on_message(msg):
     """ Check for phishing scams """
     async with bot.cursor() as cur:
-        await cur.execute(f"select * from phishing where guild_id = {msg.guild.id};")
+        await cur.execute(f"select action from phishing where guild_id = {msg.guild.id};")
         if cur.rowcount:
-            # do checks
-            pass
+            triggered = False
+            ...  # Do checks
+
+            if triggered:
+                action, = await cur.fetchone()  # type: str
+                await msg.delete()
+                if action == "timeout":
+                    await msg.author.timeout(..., reason="Sending a phishing scam")
+                elif action == "ban":
+                    await msg.author.ban(reason="Sending a phishing scam")
 
 
 @bot.command(name="setup", description="Starts the configuration process")
 async def setup(ctx):
+    _action = await ChooseAction(ctx)
+    action: str = _action.split()[-1:][0]
+    async with bot.cursor() as cur:
+        await cur.execute(
+            f"insert into phishing values "
+            f"({ctx.guild.id}, '{action}') "
+            f"on duplicate key update action = '{action}'"
+        )
     await ctx.respond("Setup complete")
 
 
