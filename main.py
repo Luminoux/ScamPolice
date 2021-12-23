@@ -118,7 +118,7 @@ async def setup(ctx):
         await cur.execute(
             f"insert into phishing values "
             f"({ctx.guild.id}, '{action}') "
-            f"on duplicate key update action = '{action}'"
+            f"on duplicate key update action = '{action}';"
         )
     await ctx.respond("Setup complete")
 
