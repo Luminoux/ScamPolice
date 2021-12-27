@@ -69,8 +69,6 @@ class PhishingBot(Bot):
             return await self.close()
         print(f"Initialized db {sql['db']} with {sql['user']}@{sql['host']}")
 
-
-
     def cursor(self) -> Cursor:
         """ Returns an SQL cursor as an async contextmanager """
         return Cursor(self)
