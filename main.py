@@ -122,13 +122,12 @@ async def enable(
     )
 ):
     action: str = action.split()[-1:][0]
-    async with bot.pool.acquire() as conn:
-        async with conn.cursor() as cur:
-            await cur.execute(
-                f"insert into phishing values "
-                f"({ctx.guild.id}, '{action}') "
-                f"on duplicate key update action = '{action}';"
-            )
+    async with bot.cursor() as cur:
+        await cur.execute(
+            f"insert into phishing values "
+            f"({ctx.guild.id}, '{action}') "
+            f"on duplicate key update action = '{action}';"
+        )
     await ctx.respond("Setup complete")
 
 
