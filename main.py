@@ -16,11 +16,11 @@ import traceback
 
 import discord
 from discord import Bot
+from discord.commands import Option
 import aiomysql
 import pymysql
 
 from classes.sql import Cursor
-from classes.views import ChooseAction
 
 
 class PhishingBot(Bot):
@@ -69,6 +69,8 @@ class PhishingBot(Bot):
             return await self.close()
         print(f"Initialized db {sql['db']} with {sql['user']}@{sql['host']}")
 
+
+
     def cursor(self) -> Cursor:
         """ Returns an SQL cursor as an async contextmanager """
         return Cursor(self)
@@ -95,6 +97,8 @@ async def on_ready():
 @bot.event
 async def on_message(msg):
     """ Check for phishing scams """
+    if not bot.is_ready() or not bot.pool:
+        return
     async with bot.cursor() as cur:
         await cur.execute(f"select action from phishing where guild_id = {msg.guild.id};")
         if cur.rowcount:
@@ -110,16 +114,21 @@ async def on_message(msg):
                     await msg.author.ban(reason="Sending a phishing scam")
 
 
-@bot.command(name="setup", description="Starts the configuration process")
-async def setup(ctx):
-    _action = await ChooseAction(ctx)
-    action: str = _action.split()[-1:][0]
-    async with bot.cursor() as cur:
-        await cur.execute(
-            f"insert into phishing values "
-            f"({ctx.guild.id}, '{action}') "
-            f"on duplicate key update action = '{action}';"
-        )
+@bot.command(name="enable", description="Enables filtering phishing scams")
+async def enable(
+    ctx, action: Option(
+        str, "Action To Take",
+        choices=["Delete", "Delete & Timeout","Delete & Ban"]
+    )
+):
+    action: str = action.split()[-1:][0]
+    async with bot.pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                f"insert into phishing values "
+                f"({ctx.guild.id}, '{action}') "
+                f"on duplicate key update action = '{action}';"
+            )
     await ctx.respond("Setup complete")
 
 
