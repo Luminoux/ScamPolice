@@ -121,7 +121,7 @@ async def enable(
         choices=["Delete", "Delete & Timeout","Delete & Ban"]
     )
 ):
-    action: str = action.split()[-1:][0]
+    action: str = action.split()[-1:][0].lower()
     async with bot.cursor() as cur:
         await cur.execute(
             f"insert into phishing values "
