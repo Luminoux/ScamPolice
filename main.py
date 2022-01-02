@@ -13,17 +13,20 @@ from os import path
 import json
 import asyncio
 import traceback
+import aiohttp
+import re
+from datetime import datetime, timedelta
 
 import discord
-from discord import Bot
 from discord.commands import Option
+from discord.ext import commands
 import aiomysql
 import pymysql
 
 from classes.sql import Cursor
 
 
-class PhishingBot(Bot):
+class PhishingBot(commands.Bot):
     pool: aiomysql.Pool = None
 
     def __init__(self):
@@ -33,7 +36,7 @@ class PhishingBot(Bot):
             self.config: Dict[str, Any] = json.load(f)
 
         super().__init__(
-            intents=discord.Intents(messages=True),
+            intents=discord.Intents(messages=True, members=True),
             max_messages=100
         )
 
@@ -79,6 +82,18 @@ class PhishingBot(Bot):
 
 
 bot = PhishingBot()
+link_regex = "(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]"
+
+
+async def has_link(string) -> bool:
+    """ Checks whether or not a string contains a link """
+    def search():
+        return re.search(link_regex, string)
+
+    # Run the search in a separate thread to avoid blocking the loop
+    if await bot.loop.run_in_executor(None, search):
+        return True
+    return False
 
 
 @bot.event
@@ -95,30 +110,45 @@ async def on_ready():
 @bot.event
 async def on_message(msg):
     """ Check for phishing scams """
-    if not bot.is_ready() or not bot.pool:
+    if not bot.is_ready() or not bot.pool or not msg.content:
         return
+    # Check if the message has any links before operating
+    if "." not in msg.content or not await has_link(msg.content):
+       return
     async with bot.cursor() as cur:
         await cur.execute(f"select action from phishing where guild_id = {msg.guild.id};")
         if cur.rowcount:
             triggered = False
-            ...  # Do checks
+            async with aiohttp.ClientSession() as session:
+                method = session.post(
+                    url=bot.config["api_url"],
+                    json={"message": msg.content}
+                )
+                async with method as resp:
+                    if resp.status == 200:
+                        triggered = True
 
             if triggered:
                 action, = await cur.fetchone()  # type: str
                 await msg.delete()
                 if action == "timeout":
-                    await msg.author.timeout(..., reason="Sending a phishing scam")
+                    await msg.author.timeout(
+                        until=datetime.utcnow() + timedelta(days=1),
+                        reason="Sending a phishing scam"
+                    )
                 elif action == "ban":
                     await msg.author.ban(reason="Sending a phishing scam")
 
 
-@bot.command(name="enable", description="Enables filtering phishing scams")
+@bot.slash_command(name="enable", description="Enables filtering phishing scams")
 async def enable(
     ctx, action: Option(
         str, "Action To Take",
         choices=["Delete", "Delete & Timeout","Delete & Ban"]
     )
 ):
+    if ctx.author.id != 264838866480005122:
+        return await ctx.send("Only luck can run this rn", ephemeral=True)
     action: str = action.split()[-1:][0].lower()
     async with bot.cursor() as cur:
         await cur.execute(

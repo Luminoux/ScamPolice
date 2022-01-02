@@ -6,5 +6,6 @@
     "user": "",
     "db": "",
     "password": ""
-  }
+  },
+  "api_url": ""
 }
