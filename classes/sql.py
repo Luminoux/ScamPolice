@@ -13,6 +13,7 @@ Written by FrequencyX4 <frequencyx4@gmail.com>
 """
 
 import asyncio
+from contextlib import suppress
 import pymysql
 
 
