@@ -36,7 +36,7 @@ class PhishingBot(commands.Bot):
             self.config: Dict[str, Any] = json.load(f)
 
         super().__init__(
-            intents=discord.Intents(messages=True, members=True),
+            intents=discord.Intents(messages=True, members=True, guilds=True),
             max_messages=100
         )
 
