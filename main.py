@@ -147,8 +147,8 @@ async def enable(
         choices=["Delete", "Delete & Timeout","Delete & Ban"]
     )
 ):
-    if ctx.author.id != 264838866480005122:
-        return await ctx.send("Only luck can run this rn", ephemeral=True)
+    if not ctx.author.guild_permissions.administrator:
+        return await ctx.respond("You need administrator permissions to run this", ephemeral=True)
     action: str = action.split()[-1:][0].lower()
     async with bot.cursor() as cur:
         await cur.execute(
