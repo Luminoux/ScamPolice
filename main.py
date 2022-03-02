@@ -159,4 +159,13 @@ async def enable(
     await ctx.respond("Setup complete")
 
 
+@bot.slash_command(name="disable", description="Disables filtering phishing scams")
+async def disable(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        return await ctx.respond("You need administrator permissions to run this", ephemeral=True)
+    async with bot.cursor() as cur:
+        await cur.execute(f"delete from phishing where guild_id = {ctx.guild.id};")
+    await ctx.respond("Disabled filtering phishing scams if it was enabled")
+
+
 bot.run()
