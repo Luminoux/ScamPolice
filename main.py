@@ -18,7 +18,7 @@ import re
 from datetime import datetime, timedelta
 
 import discord
-from discord.commands import Option
+from discord import app_commands
 from discord.ext import commands
 import aiomysql
 import pymysql
@@ -26,7 +26,7 @@ import pymysql
 from classes.sql import Cursor
 
 
-class PhishingBot(commands.Bot):
+class PhishingBot(discord.Client):
     pool: aiomysql.Pool = None
 
     def __init__(self):
@@ -82,6 +82,7 @@ class PhishingBot(commands.Bot):
 
 
 bot = PhishingBot()
+tree = app_commands.CommandTree(bot)
 link_regex = "(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]"
 
 
@@ -140,14 +141,14 @@ async def on_message(msg):
                     await msg.author.ban(reason="Sending a phishing scam")
 
 
-@bot.slash_command(name="enable", description="Enables filtering phishing scams")
+@tree.command(name="enable", description="Enables filtering phishing scams")
+@app_commands.describe(
+    action="The action to take"
+)
 async def enable(
-    ctx, action: Option(
-        str, "Action To Take",
-        choices=["Delete", "Delete & Timeout","Delete & Ban"]
-    )
+    ctx, action: Literal["Delete", "Delete & Timeout","Delete & Ban"]
 ):
-    if not ctx.author.guild_permissions.administrator:
+    if not ctx.user.guild_permissions.administrator:
         return await ctx.respond("You need administrator permissions to run this", ephemeral=True)
     action: str = action.split()[-1:][0].lower()
     async with bot.cursor() as cur:
@@ -156,16 +157,16 @@ async def enable(
             f"({ctx.guild.id}, '{action}') "
             f"on duplicate key update action = '{action}';"
         )
-    await ctx.respond("Setup complete")
+    await ctx.response.send_message("Setup complete")
 
 
-@bot.slash_command(name="disable", description="Disables filtering phishing scams")
+@tree.command(name="disable", description="Disables filtering phishing scams")
 async def disable(ctx):
-    if not ctx.author.guild_permissions.administrator:
-        return await ctx.respond("You need administrator permissions to run this", ephemeral=True)
+    if not ctx.user.guild_permissions.administrator:
+        return await ctx.response.send_message("You need administrator permissions to run this", ephemeral=True)
     async with bot.cursor() as cur:
         await cur.execute(f"delete from phishing where guild_id = {ctx.guild.id};")
-    await ctx.respond("Disabled filtering phishing scams if it was enabled")
+    await ctx.response.send_message("Disabled filtering phishing scams if it was enabled")
 
 
 bot.run()
